@@ -41,15 +41,21 @@ public class Product
 
 public class Customer
 {
-    private List<Product> basket = new List<Product>();
-    public decimal Money { get; private set; }
+    private readonly List<Product> basket = new List<Product>();
+
+    private decimal money;
+    public decimal Money
+    {
+        get { return money; }
+        private set { money = value; }
+    }
 
     public Customer(decimal money)
     {
         Money = money;
     }
 
-    public decimal BasketTotal
+    public decimal BasketTotalPrice
     {
         get { return basket.Sum(product => product.Price); }
     }
@@ -62,7 +68,7 @@ public class Customer
 
     public void Pay()
     {
-        while (!CanPay())
+        while (CanPay() == false)
         {
             RemoveRandomProduct();
         }
@@ -72,7 +78,7 @@ public class Customer
 
     private bool CanPay()
     {
-        return BasketTotal <= Money;
+        return BasketTotalPrice <= Money;
     }
 
     private void RemoveRandomProduct()
@@ -84,16 +90,25 @@ public class Customer
 
     private void PerformPayment()
     {
-        Console.WriteLine($"Покупатель оплатил {BasketTotal:C2} и уходит с {(Money - BasketTotal):C2} в кармане.");
-        Money -= BasketTotal;
-        basket.Clear();
+        if (basket.Count == 0)
+        {
+            Console.WriteLine("Покупатель ничего не смог купить.");
+        }
+        else
+        {
+            Console.WriteLine($"Покупатель оплатил {BasketTotalPrice:C2} и уходит с {(Money - BasketTotalPrice):C2} в кармане.");
+            Money -= BasketTotalPrice;
+            basket.Clear();
+        }
     }
 }
 
 public class Supermarket
 {
-    private List<Product> products = new List<Product>();
-    private List<Customer> queue = new List<Customer>();
+    private readonly List<Product> products = new List<Product>();
+    private readonly Queue<Customer> queue = new Queue<Customer>();
+
+    private decimal balance;
 
     public void AddProduct(string name, decimal price)
     {
@@ -107,18 +122,20 @@ public class Supermarket
 
     public void AddCustomerToQueue(Customer customer)
     {
-        queue.Add(customer);
-        Console.WriteLine($"Покупатель встал в очередь. У него {customer.BasketTotal:C2} товаров на {customer.Money:C2}.");
+        queue.Enqueue(customer);
+        Console.WriteLine($"Покупатель встал в очередь. У него на {customer.Money:C2} товаров на общую сумму {customer.BasketTotalPrice:C2}.");
     }
 
     public void ProcessCustomers()
     {
-        foreach (var customer in queue)
+        while (queue.Count > 0)
         {
+            var customer = queue.Dequeue();
+            var totalBeforePayment = customer.BasketTotalPrice;
             customer.Pay();
+            balance += totalBeforePayment - customer.BasketTotalPrice;
         }
 
-        Console.WriteLine("Все покупатели в очереди были обслужены.");
-        queue.Clear();
+        Console.WriteLine($"Все покупатели в очереди были обслужены. Баланс супермаркета: {balance:C2}");
     }
 }
